@@ -1,85 +1,56 @@
 import { useState, useEffect, FormEvent } from 'react'
-import Image from 'next/image'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 import styled from 'styled-components'
+
+import { useWaitingTypingFinish } from '../hooks/useWaitingTypingFinish'
+
 import { Button } from '../components/Button'
 import { TextField } from '../components/TextField'
+import { UserInfoCard } from '../components/UserInfoCard'
+
+var searchTimeout: NodeJS.Timeout | undefined
 
 export default function Home() {
   const router = useRouter()
+  const { typingFinished, onKeyPressCallback } = useWaitingTypingFinish(searchTimeout)
   const [githubUser, setGithubUser] = useState('')
-  const [typingFinished, setTypingFinished] = useState(false)
-  const [userIsValid, setUserIsValid] = useState(false)
-  var searchTimeout: NodeJS.Timeout | undefined
-
-  useEffect(() => {
-    if(githubUser !== '' && typingFinished) {
-      fetch(`https://api.github.com/users/${githubUser}`).then(res => {
-        if(res.status === 200) {
-          setUserIsValid(true)
-        } else if(res.status === 404) {
-          setUserIsValid(false)
-        }
-      })
-    }
-  }, [githubUser, typingFinished])
 
   function handleConnectionCreation(event:FormEvent<HTMLFormElement>) {
     event.preventDefault()
   }
 
   return (
-    <Home.Wrapper>
-      <div className="container">
-        <div className="form-container">
-          <h1 className="title">Crie uma nova conexão</h1>
-          <form onSubmit={(event) => handleConnectionCreation(event)}>
-            <TextField
-              value={githubUser}
-              onChange={(event) => setGithubUser(event.target.value)}
-              placeholder='Digite seu usuário do GitHub'
-              onKeyPress={() => {
-                setTypingFinished(false)
+    <>
+      <Head>
+        <title>Aluracord - Crie sua conexão</title>
+      </Head>
 
-                if(searchTimeout !== undefined) {
-                  clearTimeout(searchTimeout)
-                }
-
-                searchTimeout = setTimeout(() => setTypingFinished(true), 1500)
-              }}
-            />
-            <Button>Criar conexão</Button>
-          </form>
-          <span className="divisor body">ou</span>
-          <Button
-            onClick={() => router.push('/join')}
-            outlined
-          >Entrar numa conexão</Button>
-        </div>
-        <div className="user-info">
-          <div className="avatar">
-            {
-              userIsValid && githubUser.length > 3 && (
-                <>
-                  <Image
-                    src={`https://github.com/${githubUser}.png`}
-                    alt="GitHub avatar"
-                    objectFit='cover'
-                    width={96}
-                    height={96}
-                  />
-                </>
-              )
-            }
+      <Home.Wrapper>
+        <div className="container">
+          <div className="form-container">
+            <h1 className="title">Crie uma nova conexão</h1>
+            <form onSubmit={(event) => handleConnectionCreation(event)}>
+              <TextField
+                value={githubUser}
+                onChange={(event) => setGithubUser(event.target.value)}
+                placeholder='Digite seu usuário do GitHub'
+                onKeyPress={onKeyPressCallback}
+              />
+              <Button>Criar conexão</Button>
+            </form>
+            <span className="divisor body">ou</span>
+            <Button
+              onClick={() => router.push('/join')}
+              outlined
+            >
+              Entrar numa conexão
+            </Button>
           </div>
-          <h2 className="name highlighted-bold">
-            {
-              githubUser ? githubUser : 'Seu usuário'
-            }
-          </h2>
+          <UserInfoCard githubUser={githubUser} typingFinished={typingFinished} />
         </div>
-      </div>
-    </Home.Wrapper>
+      </Home.Wrapper>
+    </>
   )
 }
 
@@ -139,63 +110,6 @@ Home.Wrapper = styled.main`
         top: 50%;
         right: 0;
       }
-    }
-  }
-  .user-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-    padding: 48px;
-    background: ${({ theme }) => theme.colors.secondary};
-    box-shadow: 5px 5px 5px rgba(0, 0, 0, .25);
-    border-radius: 15px;
-
-    .avatar {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 96px;
-      height: 96px;
-      background: rgba(255, 255, 255, .05);
-      border-radius: 50%;
-      overflow: hidden;
-      position: relative;
-
-      &::before {
-        content: '';
-        width: 32px;
-        height: 32px;
-        background: rgba(255, 255, 255, .1);
-        border-radius: 50%;
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-      &::after {
-        content: '';
-        width: 64px;
-        height: 72px;
-        background: rgba(255, 255, 255, .1);
-        border-radius: 50%;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-    }
-    .name {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px 16px;
-      background: rgba(255, 255, 255, .05);
-      color: #fff;
-      border-radius: 5px;
-      max-width: 200px;
-      text-align: center;
-      overflow-x: auto;
     }
   }
 `
