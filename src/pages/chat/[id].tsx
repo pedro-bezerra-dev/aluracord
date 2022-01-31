@@ -1,25 +1,105 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Image from 'next/image'
 import styled from 'styled-components'
+import { createClient, SupabaseRealtimePayload, RealtimeSubscription } from '@supabase/supabase-js'
+import { getAllMessages, subscribeForChanges } from '../../services/supabase'
 
 import { Button } from '../../components/Button'
 
 import share from '../../assets/icons/share.svg'
 
 type ChatProps = {
-  supabaseAnonKey: string;
   supabaseUrl: string;
+  supabaseAnonKey: string;
 }
 
-export default function Chat({ supabaseAnonKey, supabaseUrl }:ChatProps) {
+type Message = {
+  id: number;
+  created_at: string;
+  from: string;
+  content: string;
+}
+
+type Messages = Array<Message>
+
+export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
   const router = useRouter()
   const connectionId = router.query.id
+  const [messages, setMessages] = useState<Messages>([])
   const [newMessageContent, setNewMessageContent] = useState('')
+  const [subscriptionForChanges, setSubscriptionForChanges] = useState<RealtimeSubscription>()
+
+  useEffect(() => {
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+    const subscription = subscribeForChanges(supabaseClient, {
+      table: 'messages',
+      action: 'INSERT',
+      callbackForChanges
+    })
+
+    getAllMessages(supabaseClient).then(messages => setMessages(messages))
+    setSubscriptionForChanges(subscription)
+  }, [supabaseAnonKey, supabaseUrl])
+
+  function callbackForChanges(payload:SupabaseRealtimePayload<any>) {
+    setMessages((messages) => {
+      return [
+        ...messages,
+        payload.new
+      ]
+    })
+  }
 
   function handleSendMessage(message: string) {
-    console.log(message, 'enviada!')
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+    const newMessage = {
+      created_at: new Date(),
+      from: 'pedro-henrique-sb',
+      content: message
+    }
+
+    try {
+      supabaseClient
+        .from('messages')
+        .insert([newMessage])
+        .then(res => {
+          if(res.error) {
+            throw new Error
+          }
+        })
+    } catch(error) {
+      alert('Algo deu errado. Por favor, tente novamente.')
+    }
+  }
+
+  function handleShareConnectionLink() {
+    if(window) {
+      const url = window.location.href
+      navigator.clipboard.writeText(url)
+      alert('Link da conexão copiado para a área de transferência.')
+    }
+  }
+
+  function handleConnectionExit() {
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+
+    if(subscriptionForChanges) {
+      try {
+        supabaseClient
+          .removeSubscription(subscriptionForChanges)
+          .then(res => {
+            if(res.error) {
+              throw new Error
+            }
+
+            router.push('/')
+          })
+      } catch(error) {
+        alert('Algo deu errado. Por favor, tente novamente.')
+      }
+    }
   }
 
   return (
@@ -32,29 +112,41 @@ export default function Chat({ supabaseAnonKey, supabaseUrl }:ChatProps) {
         <header>
           <h2 className="title">9 pessoas conectadas</h2>
           <div className="action-buttons">
-            <Button className='share-link'>
+            <Button
+              className='share-link'
+              onClick={handleShareConnectionLink}
+            >
               Compartilhar link
               <Image src={share} alt='Ícone' width={64} height={64} />
             </Button>
-            <Button className='exit-connection'>Sair da conexão</Button>
+            <Button
+              className='exit-connection'
+              onClick={handleConnectionExit}
+            >Sair da conexão</Button>
           </div>
         </header>
-        <section className="chat">
+        <section className={`chat ${messages.length === 0 ? 'empty' : ''}`}>
           <ul className="messages">
-            <li className="message">
-              <div className="user-info">
-                <div className="avatar">
-                  <Image
-                    src='https://github.com/peas.png'
-                    alt='avatar'
-                    width={32}
-                    height={32}
-                  />
-                </div>
-                <span className="name highlighted-bold">Peas</span>
-              </div>
-              <p className="body">Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quasi, nihil corrupti. Eius ut cupiditate vitae accusamus sed quidem dolor aliquam sunt, aliquid quis totam rerum vero labore, quo, eos ex?</p>
-            </li>
+            {
+              messages.map(({ id, from, content }) => {
+                return (
+                  <li key={id} className="message">
+                    <div className="user-info">
+                      <div className="avatar">
+                        <Image
+                          src={`https://github.com/${from}.png`}
+                          alt='avatar'
+                          width={32}
+                          height={32}
+                        />
+                      </div>
+                      <span className="name highlighted-bold">{from}</span>
+                    </div>
+                    <p className="body">{content}</p>
+                  </li>
+                )
+              })
+            }
           </ul>
         </section>
         <div className="message-editor">
@@ -72,7 +164,15 @@ export default function Chat({ supabaseAnonKey, supabaseUrl }:ChatProps) {
               }
             }}
           />
-          <Button>Enviar</Button>
+          <Button
+            onClick={(event) => {
+              handleSendMessage(newMessageContent)
+              setNewMessageContent('')
+              event.preventDefault()
+            }}
+          >
+            Enviar
+          </Button>
         </div>
       </Chat.Wrapper>
     </>
@@ -80,13 +180,13 @@ export default function Chat({ supabaseAnonKey, supabaseUrl }:ChatProps) {
 }
 
 export async function getServerSideProps() {
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ? process.env.SUPABASE_ANON_KEY : null
   const supabaseUrl = process.env.SUPABASE_URL ? process.env.SUPABASE_URL : null
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ? process.env.SUPABASE_ANON_KEY : null
 
   return {
     props: {
-      supabaseAnonKey,
-      supabaseUrl
+      supabaseUrl,
+      supabaseAnonKey
     }
   }
 }
@@ -152,6 +252,32 @@ Chat.Wrapper = styled.main`
     position: relative;
     overflow-y: auto;
 
+    &.empty {
+      &::before {
+        content: '';
+        width: 96px;
+        height: 96px;
+        background: conic-gradient(#fff, ${({ theme }) => theme.colors.secondary});
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: loading 1.5s linear infinite;
+      }
+      &::after {
+        content: '';
+        width: 80px;
+        height: 80px;
+        background: ${({ theme }) => theme.colors.secondary};
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+    }
+
     .messages {
       display: flex;
       flex-direction: column;
@@ -214,6 +340,15 @@ Chat.Wrapper = styled.main`
     button {
       flex: 1;
       height: 80px;
+    }
+  }
+
+  @keyframes loading {
+    0% {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+      transform: translate(-50%, -50%) rotate(-360deg);
     }
   }
 `
