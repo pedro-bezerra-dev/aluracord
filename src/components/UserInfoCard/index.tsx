@@ -1,15 +1,33 @@
-import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/router'
+import { signOut } from '../../services/supabase'
 
 import { useAuth } from '../../hooks/useAuth'
 
 import { UserInfoCardWrapper } from './styles'
 
 export function UserInfoCard() {
+  const router = useRouter()
   const { user } = useAuth()
 
   return (
     <UserInfoCardWrapper>
+      <button
+        aria-label='Fazer logout'
+        title='Fazer logout'
+        className="logout-button"
+        style={{
+          display: user === undefined ? 'none' : '',
+        }}
+        onClick={() => {
+          signOut().then(() => {
+            router.reload()
+          })
+        }}
+      >
+        <span className="highlighted-bold">Logout</span>
+        <span className="icon" />
+      </button>
       <div
         className={`avatar ${user ? '' : 'empty'}`}
       >
