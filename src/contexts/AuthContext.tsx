@@ -17,41 +17,29 @@ export function AuthContextProvider({ children }:AuthContextProviderProps) {
   const [user, setUser] = useState<User>()
 
   useEffect(() => {
-    try {
-      supabaseClient
-        .auth
-        .refreshSession()
-        .then(({ user, error }) => {
-          if(error) {
-            throw new Error
-          }
+    const user = supabaseClient.auth.user()
 
-          if(user) {
-            setUser(user)
-          }
-        })
-    } catch(error) {
-      alert('Não conseguimos atualizar a sua sessão. Por favor, faça login novamente.')
+    if(user) {
+      setUser(user)
     }
+
+    supabaseClient
+      .auth
+      .refreshSession()
+      .then(({ user }) => {
+        if(user) {
+          setUser(user)
+        }
+      })
   }, [])
 
   async function signInWithGithub() {
-    try {
-      const { error } = await supabaseClient.auth.signIn({
-        provider: 'github'
-      })
+    const { error } = await supabaseClient.auth.signIn({
+      provider: 'github'
+    })
 
-      if(error) {
-        throw new Error
-      }
-    } catch(error) {
-      alert('Algo deu errado. Por favor, tente novamente.')
-    } finally {
-      const user = supabaseClient.auth.user()
-
-      if(user) {
-        setUser(user)
-      }
+    if(error) {
+      throw new Error
     }
   }
 
