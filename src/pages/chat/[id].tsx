@@ -51,7 +51,6 @@ export default function Chat() {
 
   function handleSendMessage(message: string) {
     const newMessage = {
-      created_at: new Date(),
       from: user?.user_metadata.user_name,
       content: message
     }
