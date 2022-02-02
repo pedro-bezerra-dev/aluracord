@@ -1,4 +1,4 @@
-import { useEffect, ButtonHTMLAttributes, ReactNode } from 'react'
+import { ButtonHTMLAttributes, ReactNode } from 'react'
 import Image from 'next/image'
 
 import { useAuth } from '../../hooks/useAuth'
