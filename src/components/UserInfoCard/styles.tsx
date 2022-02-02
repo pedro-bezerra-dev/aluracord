@@ -43,29 +43,6 @@ export const UserInfoCardWrapper = styled.div`
       left: 50%;
       transform: translateX(-50%);
     }
-    &.loading::before {
-      content: '';
-      width: 48px;
-      height: 48px;
-      background: conic-gradient(${({ theme }) => theme.colors.quintenary}, ${({ theme }) => theme.colors.tertiary});
-      border-radius: 50%;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      animation: loading 1.5s linear infinite;
-    }
-    &.loading::after {
-      content: '';
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05)), ${({ theme }) => theme.colors.secondary};
-      border-radius: 50%;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
 
     > span {
       z-index: 100;
@@ -82,14 +59,5 @@ export const UserInfoCardWrapper = styled.div`
     max-width: 200px;
     text-align: center;
     overflow-x: auto;
-  }
-
-  @keyframes loading {
-    0% {
-      transform: translate(-50%, -50%) rotate(0deg);
-    }
-    100% {
-      transform: translate(-50%, -50%) rotate(-360deg);
-    }
   }
 `
