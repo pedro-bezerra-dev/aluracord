@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient, SupabaseRealtimePayload } from '@supabase/supabase-js'
+import { createClient, SupabaseRealtimePayload } from '@supabase/supabase-js'
 
 type Message = {
   id: number;
@@ -42,7 +42,7 @@ export async function getAllMessages() {
   }
 }
 
-export function subscribeForChanges(supabaseClient:SupabaseClient, { table, action, callbackForChanges }:SubscribeForChangesProps) {
+export function subscribeForChanges({ table, action, callbackForChanges }:SubscribeForChangesProps) {
   const subscription = supabaseClient
     .from(table)
     .on(action, payload => callbackForChanges(payload))
