@@ -3,18 +3,13 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import styled from 'styled-components'
 
-import { useWaitingTypingFinish } from '../hooks/useWaitingTypingFinish'
-
 import { Button } from '../components/Button'
+import { GithubLoginButton } from '../components/GithubLoginButton'
 import { TextField } from '../components/TextField'
 import { UserInfoCard } from '../components/UserInfoCard'
 
-var searchTimeout: NodeJS.Timeout | undefined
-
 export default function Join() {
   const router = useRouter()
-  const { typingFinished, onKeyPressCallback } = useWaitingTypingFinish(searchTimeout)
-  const [githubUser, setGithubUser] = useState('')
   const [connectionLink, setConnectionLink] = useState('')
 
   function handleJoinTheConnection(event:FormEvent<HTMLFormElement>) {
@@ -33,25 +28,18 @@ export default function Join() {
             <h1 className="title">Entre numa conexão existente</h1>
             <form onSubmit={(event) => handleJoinTheConnection(event)}>
               <TextField
-                value={githubUser}
-                onChange={(event) => setGithubUser(event.target.value)}
-                placeholder='Digite seu usuário do GitHub'
-                onKeyPress={onKeyPressCallback}
-              />
-              <TextField
                 value={connectionLink}
                 onChange={(event) => setConnectionLink(event.target.value)}
-                placeholder='Insira o link da conexão'
+                placeholder='Insira o código da conexão'
               />
-              <Button>Entrar na conexão</Button>
+              <GithubLoginButton>Entrar na conexão com o GitHub</GithubLoginButton>
             </form>
             <span className="divisor body">ou</span>
             <Button
               onClick={() => router.push('/')}
-              outlined
             >Crie uma nova conexão</Button>
           </div>
-          <UserInfoCard githubUser={githubUser} typingFinished={typingFinished} />
+          <UserInfoCard />
         </div>
       </Join.Wrapper>
     </>
