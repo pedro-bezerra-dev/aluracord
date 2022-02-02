@@ -50,3 +50,15 @@ export function subscribeForChanges({ table, action, callbackForChanges }:Subscr
 
   return subscription
 }
+
+export async function signOut() {
+  try {
+    const { error } = await supabaseClient.auth.signOut()
+
+    if(error) {
+      throw new Error
+    }
+  } catch(error) {
+    alert('Algo deu errado. Por favor, tente novamente.')
+  }
+}
