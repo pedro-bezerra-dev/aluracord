@@ -1,20 +1,14 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { FormEvent } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import styled from 'styled-components'
 
-import { useWaitingTypingFinish } from '../hooks/useWaitingTypingFinish'
-
 import { Button } from '../components/Button'
-import { TextField } from '../components/TextField'
+import { GithubLoginButton } from '../components/GithubLoginButton'
 import { UserInfoCard } from '../components/UserInfoCard'
-
-var searchTimeout: NodeJS.Timeout | undefined
 
 export default function Home() {
   const router = useRouter()
-  const { typingFinished, onKeyPressCallback } = useWaitingTypingFinish(searchTimeout)
-  const [githubUser, setGithubUser] = useState('')
 
   function handleConnectionCreation(event:FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,24 +24,15 @@ export default function Home() {
         <div className="container">
           <div className="form-container">
             <h1 className="title">Crie uma nova conexão</h1>
-            <form onSubmit={(event) => handleConnectionCreation(event)}>
-              <TextField
-                value={githubUser}
-                onChange={(event) => setGithubUser(event.target.value)}
-                placeholder='Digite seu usuário do GitHub'
-                onKeyPress={onKeyPressCallback}
-              />
-              <Button>Criar conexão</Button>
-            </form>
+            <GithubLoginButton>Criar conexão com o GitHub</GithubLoginButton>
             <span className="divisor body">ou</span>
             <Button
               onClick={() => router.push('/join')}
-              outlined
             >
               Entrar numa conexão
             </Button>
           </div>
-          <UserInfoCard githubUser={githubUser} typingFinished={typingFinished} />
+          <UserInfoCard />
         </div>
       </Home.Wrapper>
     </>
