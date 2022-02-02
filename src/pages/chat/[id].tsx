@@ -3,17 +3,14 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Image from 'next/image'
 import styled from 'styled-components'
-import { createClient, SupabaseRealtimePayload, RealtimeSubscription } from '@supabase/supabase-js'
-import { getAllMessages, subscribeForChanges } from '../../services/supabase'
+import { SupabaseRealtimePayload, RealtimeSubscription } from '@supabase/supabase-js'
+import { supabaseClient, getAllMessages, subscribeForChanges } from '../../services/supabase'
+
+import { useAuth } from '../../hooks/useAuth'
 
 import { Button } from '../../components/Button'
 
 import share from '../../assets/icons/share.svg'
-
-type ChatProps = {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-}
 
 type Message = {
   id: number;
@@ -24,7 +21,8 @@ type Message = {
 
 type Messages = Array<Message>
 
-export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
+export default function Chat() {
+  const { user } = useAuth()
   const router = useRouter()
   const connectionId = router.query.id
   const [messages, setMessages] = useState<Messages>([])
@@ -32,16 +30,15 @@ export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
   const [subscriptionForChanges, setSubscriptionForChanges] = useState<RealtimeSubscription>()
 
   useEffect(() => {
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
-    const subscription = subscribeForChanges(supabaseClient, {
+    const subscription = subscribeForChanges({
       table: 'messages',
       action: 'INSERT',
       callbackForChanges
     })
 
-    getAllMessages(supabaseClient).then(messages => setMessages(messages))
+    getAllMessages().then(messages => setMessages(messages))
     setSubscriptionForChanges(subscription)
-  }, [supabaseAnonKey, supabaseUrl])
+  }, [])
 
   function callbackForChanges(payload:SupabaseRealtimePayload<any>) {
     setMessages((messages) => {
@@ -53,10 +50,9 @@ export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
   }
 
   function handleSendMessage(message: string) {
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
     const newMessage = {
       created_at: new Date(),
-      from: 'pedro-henrique-sb',
+      from: user?.user_metadata.user_name,
       content: message
     }
 
@@ -83,8 +79,6 @@ export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
   }
 
   function handleConnectionExit() {
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
-
     if(subscriptionForChanges) {
       try {
         supabaseClient
@@ -105,12 +99,12 @@ export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
   return (
     <>
       <Head>
-        <title>Aluracord - Chat com [n] pessoas</title>
+        <title>Aluracord - Chat</title>
       </Head>
 
       <Chat.Wrapper>
         <header>
-          <h2 className="title">9 pessoas conectadas</h2>
+          <h2 className="title">Aluracord</h2>
           <div className="action-buttons">
             <Button
               className='share-link'
@@ -179,18 +173,6 @@ export default function Chat({ supabaseUrl, supabaseAnonKey }:ChatProps) {
   )
 }
 
-export async function getServerSideProps() {
-  const supabaseUrl = process.env.SUPABASE_URL ? process.env.SUPABASE_URL : null
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ? process.env.SUPABASE_ANON_KEY : null
-
-  return {
-    props: {
-      supabaseUrl,
-      supabaseAnonKey
-    }
-  }
-}
-
 Chat.Wrapper = styled.main`
   display: flex;
   flex-direction: column;
@@ -219,7 +201,8 @@ Chat.Wrapper = styled.main`
       gap: 8px;
 
       button {
-
+        color: ${({ theme }) => theme.colors.secondary};
+        border: none;
       }
       .share-link {
         display: flex;
@@ -340,6 +323,8 @@ Chat.Wrapper = styled.main`
     button {
       flex: 1;
       height: 80px;
+      background: ${({ theme }) => theme.colors.primary};
+      color: ${({ theme }) => theme.colors.secondary};
     }
   }
 
