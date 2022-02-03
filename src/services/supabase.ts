@@ -1,8 +1,8 @@
 import { createClient, SupabaseRealtimePayload } from '@supabase/supabase-js'
 
 type Message = {
-  id: number;
-  created_at: string;
+  id?: number;
+  created_at?: string;
   from: string;
   content: string;
 }

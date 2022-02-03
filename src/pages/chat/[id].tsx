@@ -13,8 +13,8 @@ import { Button } from '../../components/Button'
 import share from '../../assets/icons/share.svg'
 
 type Message = {
-  id: number;
-  created_at: string;
+  id?: number;
+  created_at?: string;
   from: string;
   content: string;
 }
