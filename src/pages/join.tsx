@@ -1,7 +1,10 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, FormEvent } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import styled from 'styled-components'
+import { connectionExists } from '../services/supabase'
+
+import { useAuth } from '../hooks/useAuth'
 
 import { Button } from '../components/Button'
 import { GithubLoginButton } from '../components/GithubLoginButton'
@@ -10,10 +13,19 @@ import { UserInfoCard } from '../components/UserInfoCard'
 
 export default function Join() {
   const router = useRouter()
-  const [connectionLink, setConnectionLink] = useState('')
+  const { signInWithGithub } = useAuth()
+  const [connectionCode, setConnectionCode] = useState('')
 
-  function handleJoinTheConnection(event:FormEvent<HTMLFormElement>) {
+  async function handleJoinTheConnection(event:FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const connectionCodeIsValid = await connectionExists(connectionCode)
+
+    if(connectionCodeIsValid) {
+      const redirectTo = `${window.location.origin}/chat/${connectionCode}`
+      signInWithGithub({ redirectTo })
+    } else {
+      alert('Esse código de conexão não existe. Por favor, verifique o código e tente novamente.')
+    }
   }
 
   return (
@@ -28,8 +40,8 @@ export default function Join() {
             <h1 className="title">Entre numa conexão existente</h1>
             <form onSubmit={(event) => handleJoinTheConnection(event)}>
               <TextField
-                value={connectionLink}
-                onChange={(event) => setConnectionLink(event.target.value)}
+                value={connectionCode}
+                onChange={(event) => setConnectionCode(event.target.value)}
                 placeholder='Insira o código da conexão'
               />
               <GithubLoginButton>Entrar na conexão com o GitHub</GithubLoginButton>
