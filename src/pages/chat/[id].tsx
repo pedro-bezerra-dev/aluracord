@@ -3,8 +3,14 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Image from 'next/image'
 import styled from 'styled-components'
+import nookies from 'nookies'
 import { SupabaseRealtimePayload, RealtimeSubscription } from '@supabase/supabase-js'
-import { supabaseClient, getAllMessages, subscribeForChanges } from '../../services/supabase'
+import {
+  supabaseClient,
+  getMessages,
+  subscribeForChanges,
+  insertNewMessage
+} from '../../services/supabase'
 
 import { useAuth } from '../../hooks/useAuth'
 
@@ -24,56 +30,53 @@ type Messages = Array<Message>
 export default function Chat() {
   const { user } = useAuth()
   const router = useRouter()
-  const connectionId = router.query.id
+  const connectionCode = router.query.id
   const [messages, setMessages] = useState<Messages>([])
+  const [loading, setLoading] = useState(true)
   const [newMessageContent, setNewMessageContent] = useState('')
   const [subscriptionForChanges, setSubscriptionForChanges] = useState<RealtimeSubscription>()
 
   useEffect(() => {
+    function callbackForChanges(payload:SupabaseRealtimePayload<any>) {
+      if(payload.new.connection_code === connectionCode) {
+        setMessages((messages) => {
+          return [
+            ...messages,
+            payload.new
+          ]
+        })
+      }
+    }
+
     const subscription = subscribeForChanges({
       table: 'messages',
       action: 'INSERT',
       callbackForChanges
     })
 
-    getAllMessages().then(messages => setMessages(messages))
+    if(typeof connectionCode === 'string') {
+      getMessages(connectionCode).then(messages => {
+        setMessages(messages)
+        setLoading(false)
+      })
+    }
     setSubscriptionForChanges(subscription)
-  }, [])
-
-  function callbackForChanges(payload:SupabaseRealtimePayload<any>) {
-    setMessages((messages) => {
-      return [
-        ...messages,
-        payload.new
-      ]
-    })
-  }
+  }, [connectionCode])
 
   function handleSendMessage(message: string) {
     const newMessage = {
+      connection_code: connectionCode,
       from: user?.user_metadata.user_name,
       content: message
     }
 
-    try {
-      supabaseClient
-        .from('messages')
-        .insert([newMessage])
-        .then(res => {
-          if(res.error) {
-            throw new Error
-          }
-        })
-    } catch(error) {
-      alert('Algo deu errado. Por favor, tente novamente.')
-    }
+    insertNewMessage(newMessage)
   }
 
   function handleShareConnectionLink() {
-    if(window) {
-      const url = window.location.href
-      navigator.clipboard.writeText(url)
-      alert('Link da conexão copiado para a área de transferência.')
+    if(window && typeof connectionCode === 'string') {
+      navigator.clipboard.writeText(connectionCode)
+      alert('Código da conexão copiado para a área de transferência.')
     }
   }
 
@@ -109,8 +112,8 @@ export default function Chat() {
               className='share-link'
               onClick={handleShareConnectionLink}
             >
-              Compartilhar link
-              <Image src={share} alt='Ícone' width={64} height={64} />
+              Compartilhar código
+              <Image src={share} alt='Ícone' width={24} height={24} />
             </Button>
             <Button
               className='exit-connection'
@@ -118,23 +121,31 @@ export default function Chat() {
             >Sair da conexão</Button>
           </div>
         </header>
-        <section className={`chat ${messages.length === 0 ? 'empty' : ''}`}>
+        <section className={`chat ${loading ? 'empty' : ''}`}>
           <ul className="messages">
             {
-              messages.map(({ id, from, content }) => {
+              messages.map(({ id, created_at, from, content }) => {
                 return (
                   <li key={id} className="message">
-                    <div className="user-info">
-                      <div className="avatar">
-                        <Image
-                          src={`https://github.com/${from}.png`}
-                          alt='avatar'
-                          width={32}
-                          height={32}
-                        />
+                    <header>
+                      <div className="user-info">
+                        <div className="avatar">
+                          <Image
+                            src={`https://github.com/${from}.png`}
+                            alt='avatar'
+                            width={32}
+                            height={32}
+                          />
+                        </div>
+                        <span className="name highlighted-bold">{from}</span>
                       </div>
-                      <span className="name highlighted-bold">{from}</span>
-                    </div>
+                      <span className="creation-date highlighted-bold">{
+                        created_at ?
+                        `${new Date(created_at).toLocaleDateString()} | ${new Date(created_at).getHours()}:${new Date(created_at).getMinutes()}`
+                        :
+                        ''
+                      }</span>
+                    </header>
                     <p className="body">{content}</p>
                   </li>
                 )
@@ -172,6 +183,25 @@ export default function Chat() {
   )
 }
 
+export async function getServerSideProps(ctx:any) {
+  const cookies = nookies.get(ctx)
+  const sbToken = cookies['sb:token']
+  const { user } = await supabaseClient.auth.api.getUser(sbToken)
+
+  if(!user) {
+    return {
+      redirect: {
+        destination: '/join/',
+        permanent: false
+      }
+    }
+  }
+
+  return {
+    props: {}
+  }
+}
+
 Chat.Wrapper = styled.main`
   display: flex;
   flex-direction: column;
@@ -181,7 +211,7 @@ Chat.Wrapper = styled.main`
   height: 100vh;
   background: linear-gradient(rgba(10, 21, 31, .98), rgba(10, 21, 31, .98)), url('/hex-pattern.svg'), ${({ theme }) => theme.colors.secondary};
 
-  header {
+  > header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -212,6 +242,11 @@ Chat.Wrapper = styled.main`
 
         &:hover {
           box-shadow: 0 0 5px ${({ theme }) => theme.colors.quintenary};
+        }
+
+        span {
+          width: 24px !important;
+          height: 24px !important;
         }
       }
       .exit-connection {
@@ -271,6 +306,11 @@ Chat.Wrapper = styled.main`
         list-style: none;
         margin-top: 24px;
 
+        header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
         .user-info {
           display: flex;
           align-items: center;
@@ -284,6 +324,12 @@ Chat.Wrapper = styled.main`
         }
         .name {
           color: ${({ theme }) => theme.colors.primary};
+        }
+        .creation-date {
+          color: ${({ theme }) => theme.colors.quintenary};
+          opacity: 0.7;
+          font-size: 14px;
+          letter-spacing: 1px;
         }
         p {
           color: #fff;
