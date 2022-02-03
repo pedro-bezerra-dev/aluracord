@@ -1,7 +1,8 @@
-import { FormEvent } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import styled from 'styled-components'
+
+import { useAuth } from '../hooks/useAuth'
 
 import { Button } from '../components/Button'
 import { GithubLoginButton } from '../components/GithubLoginButton'
@@ -9,9 +10,11 @@ import { UserInfoCard } from '../components/UserInfoCard'
 
 export default function Home() {
   const router = useRouter()
+  const { signInWithGithub } = useAuth()
 
-  function handleConnectionCreation(event:FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleCreateConnection() {
+    const redirectTo = `${window.location.origin}/chat/`
+    signInWithGithub({ redirectTo })
   }
 
   return (
@@ -24,7 +27,7 @@ export default function Home() {
         <div className="container">
           <div className="form-container">
             <h1 className="title">Crie uma nova conexão</h1>
-            <GithubLoginButton>Criar conexão com o GitHub</GithubLoginButton>
+            <GithubLoginButton onClick={handleCreateConnection}>Criar conexão com o GitHub</GithubLoginButton>
             <span className="divisor body">ou</span>
             <Button
               onClick={() => router.push('/join')}
