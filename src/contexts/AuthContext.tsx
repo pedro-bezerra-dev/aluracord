@@ -4,11 +4,15 @@ import { supabaseClient } from '../services/supabase'
 
 type AuthContextType = {
   user: User | undefined;
-  signInWithGithub: () => Promise<void>
+  signInWithGithub: (props:SignInWithGithubProps) => Promise<void>
 }
 
 type AuthContextProviderProps = {
   children: ReactNode;
+}
+
+type SignInWithGithubProps = {
+  redirectTo?: string;
 }
 
 export const AuthContext = createContext({} as AuthContextType)
@@ -23,6 +27,23 @@ export function AuthContextProvider({ children }:AuthContextProviderProps) {
       setUser(user)
     }
 
+    const { data: authStateListener } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if(session?.user) {
+        setUser(session.user)
+      }
+      if(session?.user === null || session?.user === undefined) {
+        setUser(undefined)
+      }
+
+      await fetch('/api/auth-cookie', {
+        method: 'POST',
+        body: JSON.stringify({ event, session }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+    })
+
     supabaseClient
       .auth
       .refreshSession()
@@ -31,11 +52,17 @@ export function AuthContextProvider({ children }:AuthContextProviderProps) {
           setUser(user)
         }
       })
+
+    return () => {
+      authStateListener?.unsubscribe()
+    }
   }, [])
 
-  async function signInWithGithub() {
+  async function signInWithGithub({ redirectTo }:SignInWithGithubProps) {
     const { error } = await supabaseClient.auth.signIn({
       provider: 'github'
+    }, {
+      redirectTo
     })
 
     if(error) {
