@@ -20,6 +20,30 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? process.env.
 
 export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
 
+export async function createConnection(creator:string) {
+  let connectionCode = ''
+
+  try {
+    const response = await supabaseClient
+      .from('connections')
+      .insert([{
+        creator
+      }])
+
+    if(response.error) {
+      throw new Error
+    }
+
+    if(response.data) {
+      connectionCode = response.data[0].code
+    }
+  } catch(error) {
+    alert('Algo deu errado. Por favor, tente novamente.')
+  } finally {
+    return connectionCode
+  }
+}
+
 export async function getAllMessages() {
   let messages: Messages = []
 
