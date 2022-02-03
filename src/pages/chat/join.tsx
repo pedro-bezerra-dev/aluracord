@@ -1,20 +1,31 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import nookies from 'nookies'
-import { supabaseClient } from '../../services/supabase'
+import { supabaseClient, connectionExists } from '../../services/supabase'
 
 export default function Join() {
   const router = useRouter()
   const connectionCode = router.query.code
 
   useEffect(() => {
-    const redirectTo = `/chat/${connectionCode}`
 
-    if(!connectionCode) {
-      router.push('/join/')
+    if(connectionCode) {
+      connectionExists(connectionCode).then(res => {
+        if(res === true) {
+          const redirectTo = `/chat/${connectionCode}`
+
+          if(!connectionCode) {
+            router.push('/join/')
+          }
+
+          router.push(redirectTo)
+        } else {
+          alert('Essa conexão não existe. Verifique o código da conexão.')
+          router.push('/join/')
+        }
+      })
     }
 
-    router.push(redirectTo)
   }, [router, connectionCode])
 
   return null
