@@ -44,13 +44,28 @@ export async function createConnection(creator:string) {
   }
 }
 
-export async function getAllMessages() {
+export async function connectionExists(connectionCode:string | string[]) {
+  const { status } = await supabaseClient
+    .from('connections')
+    .select('code')
+    .eq('code', connectionCode)
+
+  if(status === 200) {
+    return true
+  }
+  if(status === 400) {
+    return false
+  }
+}
+
+export async function getMessages(connectionCode:string) {
   let messages: Messages = []
 
   try {
     const response = await supabaseClient
       .from('messages')
       .select()
+      .eq('connection_code', connectionCode)
 
     if(response.error) {
       throw new Error
