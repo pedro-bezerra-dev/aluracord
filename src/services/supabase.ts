@@ -66,6 +66,21 @@ export async function getAllMessages() {
   }
 }
 
+export async function insertNewMessage(message:Message) {
+  try {
+    supabaseClient
+      .from('messages')
+      .insert([message])
+      .then(res => {
+        if(res.error) {
+          throw new Error
+        }
+      })
+  } catch(error) {
+    alert('Algo deu errado. Por favor, tente novamente.')
+  }
+}
+
 export function subscribeForChanges({ table, action, callbackForChanges }:SubscribeForChangesProps) {
   const subscription = supabaseClient
     .from(table)
