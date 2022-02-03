@@ -10,12 +10,14 @@ export default function Chat() {
   const { user } = useAuth()
 
   useEffect(() => {
-    createConnection(user?.user_metadata.user_name)
-      .then((connectionCode) => {
-        const redirectTo = `/chat/${connectionCode}`
+    if(user) {
+      createConnection(user?.user_metadata.user_name)
+        .then((connectionCode) => {
+          const redirectTo = `/chat/${connectionCode}`
 
-        router.push(redirectTo)
-      })
+          router.push(redirectTo)
+        })
+    }
   }, [router, user])
 
   return null
