@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Image from 'next/image'
@@ -35,19 +35,18 @@ export default function Chat() {
   const [loading, setLoading] = useState(true)
   const [newMessageContent, setNewMessageContent] = useState('')
   const [subscriptionForChanges, setSubscriptionForChanges] = useState<RealtimeSubscription>()
+  const callbackForChanges = useCallback((payload:SupabaseRealtimePayload<any>) => {
+    if(payload.new.connection_code === connectionCode) {
+      setMessages((messages) => {
+        return [
+          ...messages,
+          payload.new
+        ]
+      })
+    }
+  }, [connectionCode])
 
   useEffect(() => {
-    function callbackForChanges(payload:SupabaseRealtimePayload<any>) {
-      if(payload.new.connection_code === connectionCode) {
-        setMessages((messages) => {
-          return [
-            ...messages,
-            payload.new
-          ]
-        })
-      }
-    }
-
     const subscription = subscribeForChanges({
       table: 'messages',
       action: 'INSERT',
@@ -61,7 +60,7 @@ export default function Chat() {
       })
     }
     setSubscriptionForChanges(subscription)
-  }, [connectionCode])
+  }, [connectionCode, callbackForChanges])
 
   function handleSendMessage(message: string) {
     const newMessage = {
